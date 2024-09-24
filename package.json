@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prepare": "husky"
+    "prepare": "husky install"
   },
   "dependencies": {
     "next": "14.2.13",
@@ -20,7 +20,7 @@
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "14.2.13",
-    "husky": "^9.1.6",
+    "husky": "^8.0.0",
     "typescript": "^5"
   }
 }
