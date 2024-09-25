@@ -10,7 +10,7 @@ export const removeSubscriber = async (email: string) => {
       }
     );
 
-    console.log(
+    console.warn(
       `Subscriber with email ${email} removed successfully!`,
       response.data
     );

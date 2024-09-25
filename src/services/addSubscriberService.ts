@@ -11,7 +11,7 @@ export const addSubscriber = async (name: string, email: string) => {
       }
     );
 
-    console.log(`Subscriber ${name} added successfully!`, response.data);
+    console.warn(`Subscriber ${name} added successfully!`, response.data);
     return response.data;
   } catch (error) {
     console.error(`Error adding subscriber ${name}:`, error);
