@@ -1,4 +1,48 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/bash
+# Define colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-npm run lint
+printf "${GREEN}++++++++++++++++++++  PRE-COMMIT HOOK - START ++++++++++++++++++++ ${NC}\n"
+printf "${GREEN} In case you need to disable hook, run it with -n flag (e.g., 'git commit -m 'example message' -n'). ${NC}\n"
+
+# Get staged JavaScript and JSON files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(js|json)$')
+
+if [ -z "$staged_files" ]; then
+  printf "${GREEN}NO STAGED JAVASCRIPT OR JSON FILES TO FORMAT.${NC}\n"
+else
+  printf "${GREEN}FORMATTING STAGED FILES WITH PRETTIER:${NC}\n"
+  echo "$staged_files" | xargs npx prettier --write
+  prettier_exit_status=$?
+
+  if [ $prettier_exit_status -ne 0 ]; then
+    printf "${RED}PRETTIER FAILED. SEE THE OUTPUT ABOVE FOR DETAILS.${NC}\n"
+    exit $prettier_exit_status
+  fi
+
+  # Add back the formatted files to staging
+  echo "$staged_files" | xargs git add
+fi
+
+printf "${GREEN}PASSED FORMAT${NC}\n"
+
+# Run ESLint on staged JavaScript files
+eslint_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(js|jsx|ts|tsx)$')
+
+if [ -n "$eslint_files" ]; then
+  printf "${GREEN}RUNNING ESLINT ON STAGED FILES:${NC}\n"
+  echo "$eslint_files" | xargs npx eslint
+  eslint_exit_status=$?
+
+  if [ $eslint_exit_status -ne 0 ]; then
+    printf "${RED}ESLINT FAILED. SEE THE OUTPUT ABOVE FOR DETAILS.${NC}\n"
+    exit $eslint_exit_status
+  fi
+else
+  printf "${GREEN}NO STAGED JAVASCRIPT FILES TO LINT.${NC}\n"
+fi
+
+printf "${GREEN}PASSED LINT${NC}\n"
+printf "${GREEN}++++++++++++++++++++  PRE-COMMIT HOOK - END ++++++++++++++++++++ ${NC}\n"

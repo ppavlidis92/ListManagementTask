@@ -1,35 +1,29 @@
-import globals from 'globals';
-import pluginJs from '@eslint/js';
-import pluginTs from '@typescript-eslint/eslint-plugin';
-import pluginReact from 'eslint-plugin-react';
-import tsParser from '@typescript-eslint/parser';
+import jsPlugin from "@eslint/js";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+import reactPlugin from "eslint-plugin-react";
+import prettierPlugin from "eslint-plugin-prettier";
+import prettierConfig from "eslint-config-prettier";
 
 export default [
   {
-    // Specify the files to lint
-    files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
+    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
     languageOptions: {
       parser: tsParser, // Use TypeScript parser
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: globals.browser,
+      ecmaVersion: "latest",
+      sourceType: "module",
     },
-    // Plugins to extend ESLint
     plugins: {
-      '@typescript-eslint': pluginTs,
-      react: pluginReact,
-      prettier: prettierPlugin,
+      "@typescript-eslint": tsPlugin,
+      "react": reactPlugin,
+      "prettier": prettierPlugin, // Add the prettier plugin
     },
-    // Extend recommended configurations
     rules: {
-      ...pluginJs.configs.recommended.rules,
-      ...pluginTs.configs['recommended'].rules,
-      ...pluginReact.configs['recommended'].rules,
-      ...prettierConfig.rules,
-      'prettier/prettier': 'error',
-      semi: ['error', 'always'], // Example: enforce semicolons
-      quotes: ['error', 'double'], // Example: enforce single quotes
-      'react/react-in-jsx-scope': 'off',
+      ...jsPlugin.configs.recommended.rules,
+      ...tsPlugin.configs["recommended"].rules,
+      ...reactPlugin.configs["recommended"].rules,
+      ...prettierConfig.rules, // Import Prettier's ESLint rules
+      "prettier/prettier": "error", // Treat Prettier formatting issues as ESLint errors
     },
   },
 ];
