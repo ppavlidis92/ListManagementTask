@@ -12,9 +12,13 @@
 }
 
 .title {
+  display: flex;
+  flex-direction: row;
   position: absolute;
   text-align: center;
   top: 100px;
+  gap: 50px;
+  left: 35%;
 }
 
 .list {
@@ -39,6 +43,13 @@
   font-size: 12px;
 }
 
+.addSubscriber,
+.addButton,
+.inputField {
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 600px) {
   .main {
     align-items: center;
@@ -52,8 +63,19 @@
     flex-direction: column;
   }
 
+  .title {
+    width: 150px;
+    font-size: 15px;
+  }
+
   .listItem {
     gap: 5px;
     width: 300px;
+  }
+
+  .addButton {
+    width: 100px;
+    height: 50px;
+    font-size: 10px;
   }
 }
