@@ -1,20 +1,28 @@
 import axios from 'axios';
+import 'dotenv/config'; // Import the `dotenv` module
 
-// Function to add a subscriber via the proxy server
 export const addSubscriber = async (name: string, email: string) => {
+  const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+  const LIST_ID = process.env.NEXT_PUBLIC_LIST_ID;
+
   try {
+    const subscriber = {
+      EmailAddress: email,
+      Name: name,
+      ConsentToTrack: 'Yes',
+      Resubscribe: true, // Resubscribe if previously unsubscribed
+    };
+
     const response = await axios.post(
-      `http://localhost:4000/api/add-subscriber`, // Proxy endpoint
+      `https://api.createsend.com/api/v3.3/subscribers/${LIST_ID}.json`,
+      subscriber,
       {
-        name, // Send the name and email in the request body
-        email,
+        headers: { Authorization: `Basic ${API_KEY}` },
       }
     );
-
-    console.warn(`Subscriber ${name} added successfully!`, response.data);
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`Error adding subscriber ${name}:`, error);
-    return null;
+    throw error; // Re-throw the error so the calling code can handle it
   }
 };

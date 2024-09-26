@@ -1,22 +1,26 @@
-import axios from 'axios';
+import 'dotenv/config'; // Import the `dotenv` module
 
-// Function to remove a subscriber via the proxy server
 export const removeSubscriber = async (email: string) => {
+  const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+  const LIST_ID = process.env.NEXT_PUBLIC_LIST_ID;
+
   try {
-    const response = await axios.delete(
-      `http://localhost:4000/api/remove-subscriber`, // Proxy endpoint
+    const response = await fetch(
+      `https://api.createsend.com/api/v3.3/subscribers/${LIST_ID}.json?email=${encodeURIComponent(email)}`,
       {
-        data: { email }, // Send the email in the request body
+        method: 'DELETE',
+        headers: { Authorization: `Basic ${API_KEY}` },
       }
     );
 
-    console.warn(
-      `Subscriber with email ${email} removed successfully!`,
-      response.data
-    );
-    return null;
+    // Check if the response is OK (status code 200-299)
+    if (!response.ok) {
+      throw new Error(`Failed to remove subscriber: ${email}`);
+    }
+
+    console.warn('Removing Subscriber:', email);
   } catch (error) {
-    console.error(`Error removing subscriber with email ${email}:`, error);
-    return null;
+    console.error(`Error removing subscriber ${email}:`, error);
+    throw error; // Ensure the error is thrown for handling in API or UI
   }
 };

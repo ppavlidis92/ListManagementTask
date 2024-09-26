@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { fetchRecipients, removeSubscriber, addSubscriber } from '@/services'; // Add addSubscriber import
 import {
   List,
   ListItem,
@@ -13,6 +12,7 @@ import {
   Typography,
   TextField,
   Button,
+  Alert,
 } from '@mui/material';
 import UnsubscribeIcon from '@mui/icons-material/Unsubscribe';
 import styles from './page.module.css';
@@ -29,119 +29,147 @@ export default function Home() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [name, setName] = useState<string>(''); // State for name input
   const [email, setEmail] = useState<string>(''); // State for email input
+  const [errorMessage, setErrorMessage] = useState<string>(''); // State for error messages
+  const [successMessage, setSuccessMessage] = useState<string>(''); // State for success messages
 
-  // Fetch recipients on component mount
+  // Fetch recipients initially
   useEffect(() => {
-    const fetchData = async () => {
-      const data = await fetchRecipients();
-      if (data) {
-        setRecipients(data);
-      }
+    const fetchRecipients = async () => {
+      const response = await fetch('/api/fetch-recipients');
+      const data = await response.json();
+      setRecipients(data.combinedRecipients);
     };
 
-    fetchData();
+    fetchRecipients();
   }, []);
 
   // Handle unsubscribe logic
   const handleUnsubscribe = async (email: string) => {
-    try {
-      await removeSubscriber(email);
-
-      // After successful unsubscribe, refresh the recipient list
-      const updatedRecipients = await fetchRecipients();
-      setRecipients(updatedRecipients);
-    } catch (error) {
-      console.error(`Failed to unsubscribe ${email}:`, error);
-    }
+    await fetch('/api/remove-subscriber', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+    const updatedRecipients = recipients.filter(
+      (recipient) => recipient.EmailAddress !== email
+    );
+    setRecipients(updatedRecipients);
   };
 
   // Handle add subscriber logic
   const handleAddSubscriber = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+
     if (name && email) {
-      await addSubscriber(name, email);
-      setName(''); // Clear name field
-      setEmail(''); // Clear email field
-      const data = await fetchRecipients();
-      setRecipients(data); // Refresh the list after adding a new subscriber
+      try {
+        const response = await fetch('/api/add-subscriber', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, email }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          // If the response is not OK, set the error message
+          setErrorMessage(result.message || 'Failed to add subscriber');
+          return;
+        }
+
+        // If successful, add the subscriber to the list and show the success message
+        setRecipients([
+          ...recipients,
+          { Name: name, EmailAddress: email, Date: '', State: 'Unconfirmed' },
+        ]);
+        setName('');
+        setEmail('');
+        setSuccessMessage('Subscriber added successfully!');
+        setErrorMessage(''); // Clear any previous error message
+      } catch (error) {
+        setErrorMessage(`Failed to add subscriber. ${error} Please try again.`);
+      }
     } else {
-      console.warn('Name and email are required to add a subscriber.');
+      setErrorMessage('Name and email are required.');
     }
   };
 
   return (
     <div className={styles.page}>
-      <main className={styles.main}>
-        <Typography variant="h4" className={styles.title}>
-          Mailing List Subscribers
-        </Typography>
-        <List className={styles.list}>
-          {recipients.map((recipient, index) => (
-            <React.Fragment key={recipient.EmailAddress}>
-              <ListItem
-                className={styles.listItem}
-                secondaryAction={
-                  <IconButton
-                    className={styles.iconButton}
-                    edge="end"
-                    aria-label="unsubscribe"
-                    // Correctly call the async function here
-                    onClick={async () =>
-                      await handleUnsubscribe(recipient.EmailAddress)
-                    }
-                  >
-                    <UnsubscribeIcon />
-                  </IconButton>
+      <Typography variant="h4" className={styles.title}>
+        Mailing List Subscribers
+      </Typography>
+      <List className={styles.list}>
+        {recipients.map((recipient, index) => (
+          <React.Fragment key={recipient.EmailAddress}>
+            <ListItem className={styles.listItem}>
+              <ListItemAvatar>
+                <Avatar>{recipient.Name.charAt(0)}</Avatar>
+              </ListItemAvatar>
+              <ListItemText
+                primary={recipient.Name}
+                secondary={
+                  <>
+                    {recipient.EmailAddress} <br />
+                    <Typography component="span" className={styles.status}>
+                      Status: <b>{recipient.State}</b>
+                    </Typography>
+                  </>
                 }
+              />
+              <IconButton
+                className={styles.iconButton}
+                edge="end"
+                aria-label="unsubscribe"
+                onClick={() => handleUnsubscribe(recipient.EmailAddress)}
               >
-                <ListItemAvatar>
-                  <Avatar>{recipient.Name.charAt(0)}</Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={recipient.Name}
-                  secondary={
-                    <>
-                      {recipient.EmailAddress} <br />
-                      <Typography component="span" className={styles.status}>
-                        Status: <b>{recipient.State}</b>
-                      </Typography>
-                    </>
-                  }
-                />
-              </ListItem>
-              {index < recipients.length - 1 && <Divider />}
-            </React.Fragment>
-          ))}
-        </List>
+                <UnsubscribeIcon />
+              </IconButton>
+            </ListItem>
+            {index < recipients.length - 1 && <Divider />}
+          </React.Fragment>
+        ))}
+      </List>
 
-        {/* Add Subscriber Section */}
-        <div className={styles.addSubscriber}>
-          <Typography variant="h5">Add Subscriber</Typography>
-          <div className={styles.form}>
-            <TextField
-              label="Name"
-              variant="outlined"
-              value={name}
-              onChange={(e) => setName(e.target.value)} // Update name input
-              className={styles.inputField}
-            />
-            <TextField
-              label="Email"
-              variant="outlined"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)} // Update email input
-              className={styles.inputField}
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleAddSubscriber}
-              className={styles.addButton}
-            >
-              Add Subscriber
-            </Button>
-          </div>
+      {/* Add Subscriber Section */}
+      <div className={styles.addSubscriber}>
+        <Typography variant="h5">Add Subscriber</Typography>
+        <div className={styles.form}>
+          <TextField
+            label="Name"
+            variant="outlined"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={styles.inputField}
+          />
+          <TextField
+            label="Email"
+            variant="outlined"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={styles.inputField}
+            error={!!errorMessage} // Set error if there's an error message
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleAddSubscriber}
+            className={styles.addButton}
+          >
+            Add Subscriber
+          </Button>
+
+          {/* Error message display */}
+          {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+
+          {/* Success message display */}
+          {successMessage && <Alert severity="success">{successMessage}</Alert>}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
