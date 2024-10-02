@@ -22,8 +22,19 @@ export const pollForRemoval = async (
       setSuccessMessage('Subscriber removed successfully!');
       setToastOpen(true);
       setRemovedSubscriber(email);
+
+      // Send event to Google Analytics with user_table_length
+      ReactGA.event({
+        category: 'Subscriber',
+        action: 'Remove Subscriber',
+        label: email,
+        value: 1, // Or any relevant value you want to track
+        nonInteraction: true,
+      });
+
+      // Track the updated user table length as user property
       ReactGA.set({
-        user_table_length: data.combinedRecipients.length.toString(), // Send as string
+        user_table_length: data.combinedRecipients.length.toString(), // Send as user property
       });
     }
   }, 1000);
@@ -52,8 +63,19 @@ export const pollForAddition = async (
       setToastOpen(true);
       setOpen(false);
       setAddedSubscriber(email);
+
+      // Send event to Google Analytics with user_table_length
+      ReactGA.event({
+        category: 'Subscriber',
+        action: 'Add Subscriber',
+        label: email,
+        value: 1, // Or any relevant value you want to track
+        nonInteraction: true,
+      });
+
+      // Track the updated user table length as user property
       ReactGA.set({
-        user_table_length: data.combinedRecipients.length.toString(), // Send as string
+        user_table_length: data.combinedRecipients.length.toString(), // Send as user property
       });
     }
   }, 1000);

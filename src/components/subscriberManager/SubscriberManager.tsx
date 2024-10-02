@@ -171,25 +171,30 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
         setRemovedSubscriber,
         setToastOpen
       );
-    } catch (error: unknown) {
-      // Handle any exception during the removal process
-      setLoadingUnsubscribe(null);
-      const errorMessage = `Failed to remove subscriber: ${error.message}`;
-      setErrorMessage(errorMessage);
+    } catch (error) {
+      if (error instanceof Error) {
+        setLoadingUnsubscribe(null);
+        const errorMessage = `Failed to remove subscriber: ${error.message}`;
+        setErrorMessage(errorMessage);
 
-      // Track error event for exceptions
-      ReactGA.event({
-        category: 'Subscriber',
-        action: 'Remove Subscriber - Error',
-        label: email,
-        value: timeTaken,
-      });
+        // Track error event for exceptions
+        ReactGA.event({
+          category: 'Subscriber',
+          action: 'Remove Subscriber - Error',
+          label: email,
+          value: timeTaken,
+        });
 
-      // Track the error separately with the error message
-      trackError(errorMessage, 'Remove Subscriber');
+        // Track the error separately with the error message
+        trackError(errorMessage, 'Remove Subscriber');
+      } else {
+        // Handle cases where error is not an instance of Error (unlikely in fetch)
+        const errorMessage = `An unknown error occurred.`;
+        setErrorMessage(errorMessage);
+        trackError(errorMessage, 'Remove Subscriber');
+      }
     }
   };
-
   const handleAddSubscriber = async () => {
     if (!typingStartTime) return;
     const timeTakenToSubmit = (Date.now() - typingStartTime) / 1000;
@@ -254,7 +259,13 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
       } catch (error: unknown) {
         // Handle any exception during the add process
         setLoading(false);
-        const errorMessage = `Failed to add subscriber: ${error.message}`;
+
+        let errorMessage = 'An unknown error occurred.';
+
+        if (error instanceof Error) {
+          errorMessage = `Failed to add subscriber: ${error.message}`;
+        }
+
         setErrorMessage(errorMessage);
 
         // Track the error event with the appropriate category
