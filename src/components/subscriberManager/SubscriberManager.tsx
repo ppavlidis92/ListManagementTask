@@ -43,13 +43,11 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
     'hotmail.com',
   ];
 
-  // Helper function to determine if the email is generic
   const isGenericEmail = (email: string): boolean => {
     const emailDomain = email.split('@')[1]?.toLowerCase();
     return genericDomains.includes(emailDomain);
   };
 
-  // Helper function to track errors with error_category
   const trackError = (errorMessage: string, errorCategory: string) => {
     ReactGA.event({
       category: 'Error',
@@ -60,7 +58,6 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
     });
   };
 
-  // Function to track action time and reset timer
   const trackActionTime = (actionType: 'Add' | 'Remove') => {
     const timeTaken = (Date.now() - pageLoadTime) / 1000; // Time since page load
     ReactGA.event({
@@ -84,7 +81,7 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
   }, [removedSubscriber, addedSubscriber]);
 
   const handleUnsubscribe = async (email: string) => {
-    const startTime = Date.now(); // Capture the time when the unsubscribe action is initiated
+    const startTime = Date.now();
     setLoadingUnsubscribe(email);
 
     // Find the index of the subscriber in the list
@@ -92,7 +89,7 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
       (recipient) => recipient.EmailAddress === email
     );
 
-    const timeTaken = (Date.now() - startTime) / 1000; // Calculate time taken before success/error
+    const timeTaken = (Date.now() - startTime) / 1000;
 
     if (subscriberIndex === -1) {
       const errorMessage = `Subscriber not found in the list.`;
@@ -268,7 +265,6 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
 
         setErrorMessage(errorMessage);
 
-        // Track the error event with the appropriate category
         trackError(errorMessage, 'Add Subscriber');
       }
     } else {
@@ -277,7 +273,6 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
       const errorMessage = 'Name and email are required.';
       setErrorMessage(errorMessage);
 
-      // Track the error event with the appropriate category
       trackError(errorMessage, 'Add Subscriber');
     }
   };

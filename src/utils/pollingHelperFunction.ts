@@ -23,7 +23,6 @@ export const pollForRemoval = async (
       setToastOpen(true);
       setRemovedSubscriber(email);
 
-      // Send event to Google Analytics with user_table_length
       ReactGA.event({
         category: 'Subscriber',
         action: 'Remove Subscriber',
@@ -32,8 +31,7 @@ export const pollForRemoval = async (
         nonInteraction: true,
       });
 
-      // Track the updated user table length as user property
-      ReactGA.set({
+      ReactGA.gtag('set', 'user_properties', {
         user_table_length: data.combinedRecipients.length.toString(), // Send as user property
       });
     }
@@ -64,17 +62,15 @@ export const pollForAddition = async (
       setOpen(false);
       setAddedSubscriber(email);
 
-      // Send event to Google Analytics with user_table_length
       ReactGA.event({
         category: 'Subscriber',
         action: 'Add Subscriber',
         label: email,
-        value: 1, // Or any relevant value you want to track
+        value: 1,
         nonInteraction: true,
       });
 
-      // Track the updated user table length as user property
-      ReactGA.set({
+      ReactGA.gtag('set', 'user_properties', {
         user_table_length: data.combinedRecipients.length.toString(), // Send as user property
       });
     }
