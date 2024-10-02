@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,6 +23,7 @@ interface AddSubscriberModalProps {
   handleAddSubscriber: () => void;
   setName: (value: string) => void;
   setEmail: (value: string) => void;
+  setTypingStartTime: (time: number) => void; // Prop to track when typing starts
 }
 
 const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
@@ -35,8 +36,24 @@ const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
   handleAddSubscriber,
   setName,
   setEmail,
+  setTypingStartTime,
 }) => {
   const classes = useStyles(); // Use the styles
+
+  const [typingStarted, setTypingStarted] = useState(false);
+
+  const handleTypingStart = () => {
+    if (!typingStarted) {
+      setTypingStarted(true);
+      setTypingStartTime(Date.now());
+    }
+  };
+
+  const handleAddSubscriberClick = () => {
+    setTypingStartTime(Date.now());
+    setTypingStarted(false);
+    handleAddSubscriber();
+  };
 
   return (
     <Dialog open={open} onClose={handleClose}>
@@ -58,7 +75,10 @@ const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
           fullWidth
           variant="outlined"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            handleTypingStart();
+          }}
         />
         <TextField
           margin="dense"
@@ -66,7 +86,10 @@ const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
           fullWidth
           variant="outlined"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            handleTypingStart();
+          }}
           error={!!errorMessage}
         />
         {loading && <CircularProgress className={classes.spinner} />}
@@ -74,7 +97,7 @@ const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
       </DialogContent>
       <DialogActions>
         <Button
-          onClick={handleAddSubscriber}
+          onClick={handleAddSubscriberClick}
           color="primary"
           disabled={loading}
         >

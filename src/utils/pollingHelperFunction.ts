@@ -1,4 +1,5 @@
 import { Recipient } from '@/types/Recipient';
+import ReactGA from 'react-ga4';
 
 export const pollForRemoval = async (
   email: string,
@@ -21,6 +22,9 @@ export const pollForRemoval = async (
       setSuccessMessage('Subscriber removed successfully!');
       setToastOpen(true);
       setRemovedSubscriber(email);
+      ReactGA.set({
+        user_table_length: data.combinedRecipients.length.toString(), // Send as string
+      });
     }
   }, 1000);
 };
@@ -48,6 +52,9 @@ export const pollForAddition = async (
       setToastOpen(true);
       setOpen(false);
       setAddedSubscriber(email);
+      ReactGA.set({
+        user_table_length: data.combinedRecipients.length.toString(), // Send as string
+      });
     }
   }, 1000);
 };

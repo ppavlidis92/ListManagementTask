@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Box, Typography } from '@mui/material';
+import ReactGA from 'react-ga4'; // Import ReactGA for tracking events
 import SubscriberList from '@/components/subscriberList/SubscriberList';
 import AddSubscriberModal from '@/components/addSubscriberModal/AddSubscriberModal';
 import { pollForRemoval, pollForAddition } from '@/utils/pollingHelperFunction';
@@ -31,6 +32,47 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
   );
   const [addedSubscriber, setAddedSubscriber] = useState<string | null>(null);
 
+  const [typingStartTime, setTypingStartTime] = useState<number | null>(null); // Track typing start time
+  const [pageLoadTime, setPageLoadTime] = useState<number>(Date.now()); // Track time since page load
+
+  // List of "generic" email providers
+  const genericDomains = [
+    'gmail.com',
+    'outlook.com',
+    'yahoo.com',
+    'hotmail.com',
+  ];
+
+  // Helper function to determine if the email is generic
+  const isGenericEmail = (email: string): boolean => {
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    return genericDomains.includes(emailDomain);
+  };
+
+  // Helper function to track errors with error_category
+  const trackError = (errorMessage: string, errorCategory: string) => {
+    ReactGA.event({
+      category: 'Error',
+      action: `Error in ${errorCategory}`,
+      label: errorMessage,
+      value: 1,
+      nonInteraction: true,
+    });
+  };
+
+  // Function to track action time and reset timer
+  const trackActionTime = (actionType: 'Add' | 'Remove') => {
+    const timeTaken = (Date.now() - pageLoadTime) / 1000; // Time since page load
+    ReactGA.event({
+      category: 'Subscriber',
+      action: `${actionType} Subscriber - Time Taken`,
+      label: actionType,
+      value: timeTaken,
+    });
+    // Reset timer for the next action
+    setPageLoadTime(Date.now());
+  };
+
   useEffect(() => {
     const fetchRecipients = async () => {
       const response = await fetch('/api/fetch-recipients');
@@ -42,15 +84,86 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
   }, [removedSubscriber, addedSubscriber]);
 
   const handleUnsubscribe = async (email: string) => {
+    const startTime = Date.now(); // Capture the time when the unsubscribe action is initiated
     setLoadingUnsubscribe(email);
+
+    // Find the index of the subscriber in the list
+    const subscriberIndex = recipients.findIndex(
+      (recipient) => recipient.EmailAddress === email
+    );
+
+    const timeTaken = (Date.now() - startTime) / 1000; // Calculate time taken before success/error
+
+    if (subscriberIndex === -1) {
+      const errorMessage = `Subscriber not found in the list.`;
+      setErrorMessage(errorMessage);
+      setLoadingUnsubscribe(null);
+
+      // Track the error event with the appropriate category
+      ReactGA.event({
+        category: 'Subscriber',
+        action: 'Remove Subscriber - Error',
+        label: email,
+        value: timeTaken,
+      });
+
+      // Track the error separately with error message
+      trackError(errorMessage, 'Remove Subscriber');
+      return;
+    }
+
+    const totalSubscribers = recipients.length;
+    const positionRatio = `${subscriberIndex + 1}/${totalSubscribers}`;
+    const emailType = isGenericEmail(email) ? 'generic' : 'personal';
+
     try {
-      await fetch('/api/remove-subscriber', {
+      // Perform unsubscribe request
+      const response = await fetch('/api/remove-subscriber', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
       });
+
+      // Track the unsubscribe action, log the time even if an error occurs
+      ReactGA.event({
+        category: 'Subscriber',
+        action: 'Remove Subscriber',
+        label: email,
+        value: timeTaken,
+      });
+
+      if (!response.ok) {
+        const errorMessage = `Failed to remove subscriber: ${response.statusText}`;
+        setErrorMessage(errorMessage);
+        setLoadingUnsubscribe(null);
+
+        // Track the error event
+        trackError(errorMessage, 'Remove Subscriber');
+
+        return; // Stop further processing if error occurs
+      }
+
+      // Only track email type and position when the removal is successful
+      ReactGA.event({
+        category: 'Subscriber',
+        action: `Remove Subscriber - Email Type: ${emailType}`,
+        label: emailType,
+        value: 1,
+      });
+
+      ReactGA.event({
+        category: 'Subscriber',
+        action: 'Remove Subscriber - Position in List',
+        label: positionRatio,
+        value: 1,
+      });
+
+      // Track the action time for removing the subscriber
+      trackActionTime('Remove');
+
+      // If successful, proceed with pollForRemoval
       pollForRemoval(
         email,
         setLoadingUnsubscribe,
@@ -58,13 +171,29 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
         setRemovedSubscriber,
         setToastOpen
       );
-    } catch (error) {
+    } catch (error: any) {
+      // Handle any exception during the removal process
       setLoadingUnsubscribe(null);
-      setErrorMessage(`Failed to remove subscriber: ${error}`);
+      const errorMessage = `Failed to remove subscriber: ${error.message}`;
+      setErrorMessage(errorMessage);
+
+      // Track error event for exceptions
+      ReactGA.event({
+        category: 'Subscriber',
+        action: 'Remove Subscriber - Error',
+        label: email,
+        value: timeTaken,
+      });
+
+      // Track the error separately with the error message
+      trackError(errorMessage, 'Remove Subscriber');
     }
   };
 
   const handleAddSubscriber = async () => {
+    if (!typingStartTime) return;
+    const timeTakenToSubmit = (Date.now() - typingStartTime) / 1000;
+
     setErrorMessage('');
     setLoading(true);
 
@@ -80,12 +209,40 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
 
         const result = await response.json();
 
+        // Determine email type
+        const emailType = isGenericEmail(email) ? 'generic' : 'personal';
+
+        // Track the event of adding a subscriber (regardless of success or error)
+        ReactGA.event({
+          category: 'Subscriber',
+          action: 'Add Subscriber',
+          label: email,
+          value: timeTakenToSubmit,
+        });
+
+        ReactGA.event({
+          category: 'Subscriber',
+          action: `Add Subscriber - Email Type: ${emailType}`,
+          label: emailType,
+          value: 1,
+        });
+
         if (!response.ok) {
+          // Handle error scenario in add subscriber
           setLoading(false);
-          setErrorMessage(result.message || 'Failed to add subscriber');
-          return;
+          const errorMessage = result.message || 'Failed to add subscriber';
+          setErrorMessage(errorMessage);
+
+          // Track the error event with the appropriate category
+          trackError(errorMessage, 'Add Subscriber');
+
+          return; // Stop further processing if error occurs
         }
 
+        // Track the action time for adding the subscriber
+        trackActionTime('Add');
+
+        // Proceed with the addition if no error
         pollForAddition(
           email,
           setLoading,
@@ -94,13 +251,23 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
           setToastOpen,
           setOpen
         );
-      } catch (error) {
+      } catch (error: any) {
+        // Handle any exception during the add process
         setLoading(false);
-        setErrorMessage(`Failed to add subscriber. ${error} Please try again.`);
+        const errorMessage = `Failed to add subscriber: ${error.message}`;
+        setErrorMessage(errorMessage);
+
+        // Track the error event with the appropriate category
+        trackError(errorMessage, 'Add Subscriber');
       }
     } else {
+      // Handle case of missing name or email
       setLoading(false);
-      setErrorMessage('Name and email are required.');
+      const errorMessage = 'Name and email are required.';
+      setErrorMessage(errorMessage);
+
+      // Track the error event with the appropriate category
+      trackError(errorMessage, 'Add Subscriber');
     }
   };
 
@@ -113,7 +280,9 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
         <Button
           variant="contained"
           color="primary"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+          }}
           className={classes.button}
         >
           Add Subscriber
@@ -136,6 +305,7 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
         handleAddSubscriber={handleAddSubscriber}
         setName={setName}
         setEmail={setEmail}
+        setTypingStartTime={setTypingStartTime} // Pass down the typing start time handler
       />
     </Box>
   );
