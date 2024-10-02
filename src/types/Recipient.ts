@@ -3,4 +3,5 @@ export interface Recipient {
   Name: string;
   Date: string;
   State: string;
+  Message: string;
 }

@@ -171,7 +171,7 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
         setRemovedSubscriber,
         setToastOpen
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle any exception during the removal process
       setLoadingUnsubscribe(null);
       const errorMessage = `Failed to remove subscriber: ${error.message}`;
@@ -251,7 +251,7 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
           setToastOpen,
           setOpen
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Handle any exception during the add process
         setLoading(false);
         const errorMessage = `Failed to add subscriber: ${error.message}`;
