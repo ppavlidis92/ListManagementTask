@@ -21,10 +21,13 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
     "next": "14.2.13",
     "react": "^18",
     "react-dom": "^18",
-    "react-ga4": "^2.1.0"
+    "react-ga4": "^2.1.0",
+    "react-pdf-html": "^2.1.2"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css}": "prettier --write"

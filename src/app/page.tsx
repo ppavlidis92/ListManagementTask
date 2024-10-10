@@ -1,182 +1,263 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import Image from 'next/image';
 import {
   TextField,
   Checkbox,
   FormControlLabel,
+  Radio,
+  RadioGroup,
   Button,
   Container,
   Typography,
+  Grid,
   Box,
 } from '@mui/material';
-import {
-  pdf,
-  Page,
-  Text,
-  View,
-  Document,
-  StyleSheet,
-} from '@react-pdf/renderer';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
-// Styles for the PDF form layout
-const styles = StyleSheet.create({
-  formSection: {
-    marginBottom: 10,
-  },
-  fieldLabel: {
-    marginBottom: 5,
-    fontSize: 12,
-  },
-  textField: {
-    borderBottom: '1px solid black',
-    paddingBottom: 3,
-    fontSize: 12,
-  },
-  checkboxField: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  checkboxBox: {
-    width: 12,
-    height: 12,
-    border: '1px solid black',
-    marginRight: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textFieldLabel: {
-    fontSize: 12,
-  },
-});
+// Import image
+import bodyImage from './body-diagram.png';
 
-const FormWithExport = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    acceptTerms: false,
-    subscribeNewsletter: false,
+// Types for form data
+interface FormData {
+  name: string;
+  email: string;
+  dob: string;
+  profession: string;
+  problemDescription: string;
+  painLevel: number;
+  acceptTerms: boolean;
+  similarPain: boolean;
+}
+
+// MarkableImage Component to handle marking and exporting the marked image
+const MarkableImage: React.FC<{ onMarkerAdded: () => void }> = ({
+  onMarkerAdded,
+}) => {
+  const [marker, setMarker] = useState<{ x: number | null; y: number | null }>({
+    x: null,
+    y: null,
   });
+  const imageRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  const handleExportPDF = () => {
-    const MyDocument = (
-      <Document>
-        <Page size="A4" style={{ padding: 20 }}>
-          <View>
-            {/* Name field */}
-            <View style={styles.formSection}>
-              <Text style={styles.fieldLabel}>Name:</Text>
-              <View style={styles.textField}>
-                <Text>{formData.name || '____________________'}</Text>
-              </View>
-            </View>
-
-            {/* Email field */}
-            <View style={styles.formSection}>
-              <Text style={styles.fieldLabel}>Email:</Text>
-              <View style={styles.textField}>
-                <Text>{formData.email || '____________________'}</Text>
-              </View>
-            </View>
-
-            {/* Accept Terms checkbox */}
-            <View style={styles.checkboxField}>
-              <View
-                style={[
-                  styles.checkboxBox,
-                  {
-                    backgroundColor: formData.acceptTerms ? 'black' : 'white',
-                  },
-                ]}
-              />
-              <Text style={styles.textFieldLabel}>Accept Terms</Text>
-            </View>
-
-            {/* Subscribe to Newsletter checkbox */}
-            <View style={styles.checkboxField}>
-              <View
-                style={[
-                  styles.checkboxBox,
-                  {
-                    backgroundColor: formData.subscribeNewsletter
-                      ? 'black'
-                      : 'white',
-                  },
-                ]}
-              />
-              <Text style={styles.textFieldLabel}>Subscribe to Newsletter</Text>
-            </View>
-          </View>
-        </Page>
-      </Document>
-    );
-
-    pdf(MyDocument)
-      .toBlob()
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'form.pdf';
-        link.click();
-      });
+  const handleImageClick = (
+    e: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    const rect = imageRef.current?.getBoundingClientRect();
+    if (rect) {
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setMarker({ x, y });
+      onMarkerAdded();
+    }
   };
 
   return (
-    <Container maxWidth="sm">
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <div onClick={handleImageClick} ref={imageRef}>
+        <Image src={bodyImage} alt="Body Diagram" width={450} height={400} />
+      </div>
+
+      {marker.x !== null && marker.y !== null && (
+        <div
+          style={{
+            position: 'absolute',
+            top: marker.y,
+            left: marker.x,
+            width: '10px',
+            height: '10px',
+            backgroundColor: 'red',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+const FormWithExport: React.FC = () => {
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    email: '',
+    dob: '',
+    profession: '',
+    problemDescription: '',
+    painLevel: 0,
+    acceptTerms: false,
+    similarPain: false,
+  });
+
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
+
+    if (e.target instanceof HTMLInputElement && type === 'checkbox') {
+      const checked = e.target.checked;
+      setFormData((prevState) => ({
+        ...prevState,
+        [name]: checked,
+      }));
+    } else {
+      setFormData((prevState) => ({
+        ...prevState,
+        [name]: value,
+      }));
+    }
+  };
+
+  // Function to export the form as PDF using html2canvas and jsPDF
+  const handleExportPDF = () => {
+    const input = formRef.current;
+    if (input) {
+      html2canvas(input, {
+        scale: 3, // Increase this value for better quality
+        useCORS: true, // Ensures cross-origin images are captured
+      }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; // A4 size width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        pdf.save('form.pdf');
+      });
+    }
+  };
+
+  return (
+    <Container maxWidth="md">
       <Box sx={{ mt: 5 }}>
-        <Typography variant="h5" gutterBottom>
-          Complete the form and export as PDF
-        </Typography>
-        <TextField
-          fullWidth
-          label="Name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="Email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          margin="normal"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={formData.acceptTerms}
+        <div ref={formRef}>
+          <Typography variant="h5" gutterBottom>
+            <b>Kineses Physiotherapy Form</b>
+          </Typography>
+
+          <Grid container spacing={2}>
+            {/* Name, Email, etc. */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Date of Birth"
+                name="dob"
+                value={formData.dob}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Profession"
+                name="profession"
+                value={formData.profession}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Grid>
+
+            {/* Problem Description */}
+            <Grid item xs={12}>
+              <Typography variant="h6">
+                ΤΙ ΠΡΟΒΛΗΜΑ ΑΝΤΙΜΕΤΩΠΙΖΕΤΕ ΠΟΣΟ ΚΑΙΡΟ & ΠΟΥ:
+              </Typography>
+              <TextField
+                fullWidth
+                name="problemDescription"
+                value={formData.problemDescription}
+                onChange={handleChange}
+                margin="normal"
+                multiline
+                rows={4}
+              />
+            </Grid>
+
+            {/* Markable Image */}
+            <Grid item xs={12} sm={6}>
+              <Typography variant="h6" gutterBottom>
+                ΣΗΜΑΔΕΨΤΕ ΤΟ ΣΗΜΕΙΟ ΤΟΥ ΠΟΝΟΥ
+              </Typography>
+              <MarkableImage onMarkerAdded={() => {}} />
+            </Grid>
+          </Grid>
+
+          {/* Pain Level */}
+          <Grid item xs={12}>
+            <Typography gutterBottom>Pain Level (0-10):</Typography>
+            <RadioGroup
+              name="painLevel"
+              value={formData.painLevel}
               onChange={handleChange}
-              name="acceptTerms"
+              row
+            >
+              {Array.from({ length: 11 }, (_, i) => i).map((level) => (
+                <FormControlLabel
+                  key={level}
+                  value={level}
+                  control={<Radio />}
+                  label={level.toString()}
+                />
+              ))}
+            </RadioGroup>
+          </Grid>
+
+          {/* Checkboxes */}
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.similarPain}
+                  onChange={handleChange}
+                  name="similarPain"
+                />
+              }
+              label="Have you experienced similar pain?"
             />
-          }
-          label="Accept Terms"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={formData.subscribeNewsletter}
-              onChange={handleChange}
-              name="subscribeNewsletter"
+          </Grid>
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.acceptTerms}
+                  onChange={handleChange}
+                  name="acceptTerms"
+                />
+              }
+              label="Accept Terms and Conditions"
             />
-          }
-          label="Subscribe to Newsletter"
-        />
-        <Button variant="contained" color="primary" onClick={handleExportPDF}>
-          Export as PDF
-        </Button>
+          </Grid>
+        </div>
+
+        {/* Export Button outside the form container */}
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Button variant="contained" color="primary" onClick={handleExportPDF}>
+            Export to PDF
+          </Button>
+        </Box>
       </Box>
     </Container>
   );
