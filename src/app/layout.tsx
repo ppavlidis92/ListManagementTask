@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'My Emailing List',
-  description: 'Add/Remove Recipient',
+  title: 'Kinesis',
+  description: 'Phsyiotherapy Form',
 };
 
 export default function RootLayout({
