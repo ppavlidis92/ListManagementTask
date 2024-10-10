@@ -60,7 +60,7 @@ const FormWithExport = () => {
     subscribeNewsletter: false,
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevState) => ({
       ...prevState,
