@@ -75,6 +75,9 @@ const SubscriberManager: React.FC<SubscriberManagerProps> = ({
       const response = await fetch('/api/fetch-recipients');
       const data = await response.json();
       setRecipients(data.combinedRecipients);
+      ReactGA.gtag('set', 'user_properties', {
+        user_table_length: data.combinedRecipients.length.toString(), // Send as user property
+      });
     };
 
     fetchRecipients();
