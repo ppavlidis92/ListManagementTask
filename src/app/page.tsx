@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import SignaturePad from 'react-signature-canvas';
 
 // Import image
 import bodyImage from './body-diagram.png';
@@ -30,9 +31,22 @@ interface FormData {
   painLevel: number;
   acceptTerms: boolean;
   similarPain: boolean;
+  sleepAffectsPain: string;
+  similarPastPain: string;
+  xrayMRI: string;
+  visitOtherDoctor: string;
+  allowedExercise: string;
+  metallicImplants: string;
+  cancerHistory: string;
+  pregnant: string;
+  arthritis: string;
+  osteoporosis: string;
+  adequateSleep: string;
 }
 
-// MarkableImage Component to handle marking and exporting the marked image
+// Types for the SignaturePad refs
+type SignaturePadRef = React.MutableRefObject<SignaturePad | null>;
+
 const MarkableImage: React.FC<{ onMarkerAdded: () => void }> = ({
   onMarkerAdded,
 }) => {
@@ -55,8 +69,11 @@ const MarkableImage: React.FC<{ onMarkerAdded: () => void }> = ({
   };
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <div onClick={handleImageClick} ref={imageRef}>
+    <div
+      style={{ position: 'relative', display: 'inline-block' }}
+      ref={imageRef}
+    >
+      <div onClick={handleImageClick}>
         <Image src={bodyImage} alt="Body Diagram" width={450} height={400} />
       </div>
 
@@ -88,9 +105,22 @@ const FormWithExport: React.FC = () => {
     painLevel: 0,
     acceptTerms: false,
     similarPain: false,
+    sleepAffectsPain: '',
+    similarPastPain: '',
+    xrayMRI: '',
+    visitOtherDoctor: '',
+    allowedExercise: '',
+    metallicImplants: '',
+    cancerHistory: '',
+    pregnant: '',
+    arthritis: '',
+    osteoporosis: '',
+    adequateSleep: '',
   });
 
   const formRef = useRef<HTMLDivElement>(null);
+  const patientSignatureRef = useRef<SignaturePad | null>(null);
+  const physioSignatureRef = useRef<SignaturePad | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -114,6 +144,13 @@ const FormWithExport: React.FC = () => {
   // Function to export the form as PDF using html2canvas and jsPDF
   const handleExportPDF = () => {
     const input = formRef.current;
+
+    // Hide only the clear buttons before export
+    const clearButtons =
+      document.querySelectorAll<HTMLButtonElement>('.clear-button');
+    clearButtons.forEach((button) => (button.style.display = 'none'));
+
+    // Capture the entire form (including signature pads and marked body diagram) in the PDF
     if (input) {
       html2canvas(input, {
         scale: 3, // Increase this value for better quality
@@ -123,10 +160,20 @@ const FormWithExport: React.FC = () => {
         const pdf = new jsPDF('p', 'mm', 'a4');
         const imgWidth = 210; // A4 size width in mm
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        // Add form image to PDF (this will capture the signatures and the body diagram with marker)
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save('form.pdf');
+        pdf.save('form_with_signature.pdf');
+
+        // Restore clear buttons after export
+        clearButtons.forEach((button) => (button.style.display = 'block'));
       });
     }
+  };
+
+  // Clear signatures
+  const clearSignature = (ref: SignaturePadRef) => {
+    ref.current?.clear();
   };
 
   return (
@@ -225,19 +272,68 @@ const FormWithExport: React.FC = () => {
             </RadioGroup>
           </Grid>
 
-          {/* Checkboxes */}
-          <Grid item xs={12}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.similarPain}
-                  onChange={handleChange}
-                  name="similarPain"
+          {/* Signature Areas */}
+          <Grid container spacing={2} sx={{ mt: 4 }}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body1">ΥΠΟΓΡΑΦΗ ΑΣΘΕΝΟΥΣ:</Typography>
+              <div
+                className="signature-pad"
+                style={{
+                  border: '1px solid black',
+                  width: '300px',
+                  height: '100px',
+                }}
+              >
+                <SignaturePad
+                  ref={patientSignatureRef}
+                  canvasProps={{
+                    width: 300,
+                    height: 100,
+                    className: 'sigCanvas',
+                  }}
                 />
-              }
-              label="Have you experienced similar pain?"
-            />
+              </div>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{ mt: 1 }}
+                className="clear-button"
+                onClick={() => clearSignature(patientSignatureRef)}
+              >
+                Clear
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body1">ΥΠΟΓΡΑΦΗ Φ/Θ:</Typography>
+              <div
+                className="signature-pad"
+                style={{
+                  border: '1px solid black',
+                  width: '300px',
+                  height: '100px',
+                }}
+              >
+                <SignaturePad
+                  ref={physioSignatureRef}
+                  canvasProps={{
+                    width: 300,
+                    height: 100,
+                    className: 'sigCanvas',
+                  }}
+                />
+              </div>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{ mt: 1 }}
+                className="clear-button"
+                onClick={() => clearSignature(physioSignatureRef)}
+              >
+                Clear
+              </Button>
+            </Grid>
           </Grid>
+
           <Grid item xs={12}>
             <FormControlLabel
               control={
