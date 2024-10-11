@@ -24,6 +24,7 @@ import bodyImage from './body-diagram.png';
 // Types for form data
 interface FormData {
   name: string;
+  lastName: string;
   email: string;
   dob: string;
   profession: string;
@@ -98,6 +99,7 @@ const MarkableImage: React.FC<{ onMarkerAdded: () => void }> = ({
 const FormWithExport: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
+    lastName: '',
     email: '',
     dob: '',
     profession: '',
@@ -157,13 +159,26 @@ const FormWithExport: React.FC = () => {
         useCORS: true, // Ensures cross-origin images are captured
       }).then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdf = new jsPDF('p', 'mm', 'a3');
         const imgWidth = 210; // A4 size width in mm
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        // Add form image to PDF (this will capture the signatures and the body diagram with marker)
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save('form_with_signature.pdf');
+        // Add margin (25px)
+        const margin = 25;
+
+        // Add form image to PDF with margin (adjust positioning)
+        pdf.addImage(
+          imgData,
+          'PNG',
+          margin,
+          margin,
+          imgWidth - 0.5 * margin,
+          imgHeight
+        );
+
+        // Format the PDF filename using the name and last name
+        const fileName = `${formData.name}_${formData.lastName}_form.pdf`;
+        pdf.save(fileName);
 
         // Restore clear buttons after export
         clearButtons.forEach((button) => (button.style.display = 'block'));
@@ -185,7 +200,7 @@ const FormWithExport: React.FC = () => {
           </Typography>
 
           <Grid container spacing={2}>
-            {/* Name, Email, etc. */}
+            {/* Name and Last Name */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -196,6 +211,18 @@ const FormWithExport: React.FC = () => {
                 margin="normal"
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Grid>
+
+            {/* Email, Date of Birth, and Profession */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
